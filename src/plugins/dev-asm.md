@@ -27,7 +27,7 @@ static int disassemble(RzAsm *a, RzAsmOp *op, const ut8 *buf, int len)
 **Makefile**
 
 ```makefile
-NAME=asm_snes
+NAME=asm_mycpu
 RZ_PLUGIN_PATH=$(shell rizin -H RZ_USER_PLUGINS)
 LIBEXT=$(shell rizin -H LIBEXT)
 CFLAGS=-g -fPIC $(shell pkg-config --cflags rz_analyss)
@@ -94,28 +94,57 @@ RZ_API RzLibStruct rizin_plugin = {
 #endif
 ```
 
-After compiling rizin will list this plugin in the output:
+After compiling rizin will list this plugin in the rz-asm output:
 ```
-_d__  _8_32      mycpu        LGPL3   MYCPU
+$ rz-asm -L |grep myc
+_d__  _8_32      mycpu        LGPL3   MYCPU disassembly plugin
 ```
 
 ### Moving plugin into the tree
 
 Pushing a new architecture into the main branch of rizin requires to modify several files in order to make it fit into the way the rest of plugins are built.
 
-List of affected files:
+__List of affected files:__
 
-* `plugins.def.cfg` : add the `asm.mycpu` plugin name string in there
-* `librz/asm/p/mycpu.mk` : build instructions
-* `librz/asm/p/asm_mycpu.c` : implementation
-* `librz/include/rz_asm.h` : add the struct definition in there
+* `librz/asm/p/asm_mycpu.c`
+That's where most of our code will be, the key part is to declare a `RzAsmPlugin` containing a valid `disassemble` field, a function pointer to the actual disassembler function.
+
+* `librz/asm/meson.build`
+The build is handled by meson, we have to add our plugin to the list of things to be compiled :
+```diff
+@@ -49,6 +49,7 @@ asm_plugins = [
+   'x86_nz',
+   'xap',
+   'xcore_cs',
++  'mycpu',
+ ]
+
+@@ -129,6 +130,7 @@ rz_asm_sources = [
+   #'p/asm_x86_vm.c',
+   'p/asm_xap.c',
+   'p/asm_xcore_cs.c',
++  'p/asm_mycpu.c',
+   #'arch/6502/6502dis.c',
+   'arch/amd29k/amd29k.c',
+   #'arch/8051/8051_disas.c',
+```
+
+* `librz/include/rz_asm.h`
+Make Rizin aware of our plugin by defining our struct :
+```diff
+@@ -265,6 +265,7 @@ extern RzAsmPlugin rz_asm_plugin_xcore_cs;
+ extern RzAsmPlugin rz_asm_plugin_xtensa;
+ extern RzAsmPlugin rz_asm_plugin_z80;
+ extern RzAsmPlugin rz_asm_plugin_pyc;
++extern RzAsmPlugin rz_asm_plugin_mycpu;
+
+ #endif
+```
 
 Check out how the NIOS II CPU disassembly plugin was implemented by reading those commits:
 
-Implement RzAsm plugin:
-https://github.com/rizinorg/rizin/commit/933dc0ef6ddfe44c88bbb261165bf8f8b531476b
+[The RzAsm plugin](https://github.com/rizinorg/rizin/commit/933dc0ef6ddfe44c88bbb261165bf8f8b531476b)
 
-Implement RzAnalysis plugin:
-https://github.com/rizinorg/rizin/commit/ad430f0d52fbe933e0830c49ee607e9b0e4ac8f2
+[The RzAnalysis plugin](https://github.com/rizinorg/rizin/commit/ad430f0d52fbe933e0830c49ee607e9b0e4ac8f2)
 
 
